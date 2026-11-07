@@ -1,6 +1,5 @@
 import "server-only";
 import { cert, getApps, initializeApp, type App } from "firebase-admin/app";
-import { getAuth } from "firebase-admin/auth";
 import { getFirestore } from "firebase-admin/firestore";
 
 // Credenciales de una service account (Consola → Configuración del proyecto →
@@ -32,5 +31,4 @@ function adminApp(): App {
   return getApps()[0] ?? createAdminApp();
 }
 
-export const adminAuth = () => getAuth(adminApp());
 export const adminDb = () => getFirestore(adminApp());
