@@ -113,4 +113,5 @@ Se puede volver a correr cuando haga falta dejar la demo limpia.
 
 - [ ] Webhook de WhatsApp Cloud API (número de prueba de Meta).
 - [ ] Derivar la conversación a una persona del equipo.
-- [ ] Deploy del panel en Vercel.
+- [ ] Guardar los pedidos confirmados en Firestore y mostrarlos en el panel.
+- [x] Deploy del panel en Vercel.
