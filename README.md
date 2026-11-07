@@ -4,6 +4,12 @@ Demo de un asistente de atención al cliente con IA, armada para practicar
 **Firebase (Authentication, Firestore y Cloud Functions)** sobre mi stack de
 siempre: **Next.js, TypeScript y Tailwind**.
 
+🔗 **Demo:** [asistente-atencion.vercel.app](https://asistente-atencion.vercel.app)
+— entrá con **Probar con la cuenta demo** para ver conversaciones de ejemplo
+sin registrarte, o escribile al asistente como si fueras un cliente.
+
+![Panel del asistente con una conversación de pedido](docs/captura.jpg)
+
 > Es un proyecto de aprendizaje, no un sistema en producción. El negocio
 > ("Pizzería Don Zonda") es ficticio.
 
