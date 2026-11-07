@@ -92,6 +92,17 @@ firestore.indexes.json      índice para la lista de conversaciones
    npm run dev
    ```
 
+## Cuenta demo
+
+`npm run seed:demo` crea (o reinicia) una cuenta demo con cuatro
+conversaciones de ejemplo: un pedido completo, una dirección fuera de zona,
+una pregunta que el asistente no sabe responder y un cliente molesto. Usa
+`NEXT_PUBLIC_DEMO_EMAIL` y `NEXT_PUBLIC_DEMO_PASSWORD` del `.env.local`; si
+esas variables también están en Vercel, el login muestra el botón
+**Probar con la cuenta demo**.
+
+Se puede volver a correr cuando haga falta dejar la demo limpia.
+
 ## Próximos pasos
 
 - [ ] Webhook de WhatsApp Cloud API (número de prueba de Meta).

@@ -3,6 +3,11 @@
 import { useState, type FormEvent } from "react";
 import { authErrorMessage, useAuth } from "@/lib/auth-context";
 
+// Si están configuradas, se muestra un botón para entrar con la cuenta demo
+// (la crea `npm run seed:demo`). Son públicas a propósito: es una demo.
+const DEMO_EMAIL = process.env.NEXT_PUBLIC_DEMO_EMAIL;
+const DEMO_PASSWORD = process.env.NEXT_PUBLIC_DEMO_PASSWORD;
+
 export function LoginForm() {
   const { loginWithEmail, registerWithEmail, loginWithGoogle } = useAuth();
   const [mode, setMode] = useState<"login" | "register">("login");
@@ -88,6 +93,17 @@ export function LoginForm() {
       >
         Continuar con Google
       </button>
+
+      {DEMO_EMAIL && DEMO_PASSWORD && (
+        <button
+          type="button"
+          disabled={pending}
+          onClick={() => run(() => loginWithEmail(DEMO_EMAIL, DEMO_PASSWORD))}
+          className="mt-3 w-full rounded-lg bg-brand-50 py-2 font-medium text-brand-700 transition hover:bg-brand-100 disabled:opacity-60"
+        >
+          Probar con la cuenta demo
+        </button>
+      )}
 
       <p className="mt-4 text-center text-sm text-slate-500">
         {mode === "login" ? "¿No tenés cuenta?" : "¿Ya tenés cuenta?"}{" "}
