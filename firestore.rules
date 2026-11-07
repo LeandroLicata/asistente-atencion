@@ -1,0 +1,48 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function signedIn() {
+      return request.auth != null;
+    }
+
+    function ownsConversation(conversationId) {
+      return signedIn() &&
+        get(/databases/$(database)/documents/conversations/$(conversationId)).data.ownerUid == request.auth.uid;
+    }
+
+    match /conversations/{conversationId} {
+      // Cada usuario ve solo sus conversaciones.
+      allow read: if signedIn() && resource.data.ownerUid == request.auth.uid;
+
+      // Desde el panel solo se crean conversaciones web propias.
+      allow create: if signedIn()
+        && request.resource.data.ownerUid == request.auth.uid
+        && request.resource.data.channel == "web";
+
+      // El cliente solo puede tocar título, último mensaje y fecha.
+      allow update: if signedIn()
+        && resource.data.ownerUid == request.auth.uid
+        && request.resource.data.diff(resource.data).affectedKeys()
+             .hasOnly(["title", "lastMessage", "updatedAt"]);
+
+      allow delete: if false;
+
+      match /messages/{messageId} {
+        allow read: if ownsConversation(conversationId);
+
+        // El cliente solo escribe mensajes propios con role "user".
+        // Las respuestas del asistente las escribe la Cloud Function con el
+        // Admin SDK, que no pasa por estas reglas.
+        allow create: if ownsConversation(conversationId)
+          && request.resource.data.role == "user"
+          && request.resource.data.text is string
+          && request.resource.data.text.size() > 0
+          && request.resource.data.text.size() <= 1000;
+
+        allow update, delete: if false;
+      }
+    }
+  }
+}
