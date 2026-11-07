@@ -84,7 +84,18 @@ export function authErrorMessage(err: unknown): string {
       return "Se cerró la ventana de Google antes de terminar.";
     case "auth/too-many-requests":
       return "Demasiados intentos. Probá de nuevo en unos minutos.";
+    case "auth/popup-blocked":
+      return "El navegador bloqueó la ventana de Google. Permití las ventanas emergentes para este sitio.";
+    case "auth/cancelled-popup-request":
+      return "Se abrió otra ventana de Google. Probá de nuevo.";
+    case "auth/unauthorized-domain":
+      return "Este dominio no está autorizado en Firebase Authentication.";
+    case "auth/operation-not-allowed":
+      return "Este método de inicio de sesión no está habilitado en Firebase.";
+    case "auth/network-request-failed":
+      return "No hay conexión con Firebase. Revisá tu internet.";
     default:
-      return "No se pudo iniciar sesión. Probá de nuevo.";
+      // Mostramos el código para poder diagnosticar errores no previstos.
+      return `No se pudo iniciar sesión${code ? ` (${code})` : ""}. Probá de nuevo.`;
   }
 }

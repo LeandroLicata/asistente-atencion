@@ -17,6 +17,7 @@ export function LoginForm() {
     try {
       await action();
     } catch (err) {
+      console.error(err);
       setError(authErrorMessage(err));
     } finally {
       setPending(false);
