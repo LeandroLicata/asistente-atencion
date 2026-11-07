@@ -9,8 +9,13 @@ import { getFirestore } from "firebase-admin/firestore";
 function createAdminApp(): App {
   const projectId = process.env.FIREBASE_PROJECT_ID;
   const clientEmail = process.env.FIREBASE_CLIENT_EMAIL;
-  // En los .env la clave viene con "\n" literales; hay que convertirlos.
-  const privateKey = process.env.FIREBASE_PRIVATE_KEY?.replace(/\\n/g, "\n");
+  // La clave suele venir con "\n" literales y, según cómo se pegó (en el
+  // .env o en el panel de Vercel), con comillas alrededor. Normalizamos
+  // ambos casos para que funcione igual en local y en producción.
+  const privateKey = process.env.FIREBASE_PRIVATE_KEY
+    ?.trim()
+    .replace(/^"([\s\S]*)"$/, "$1")
+    .replace(/\\n/g, "\n");
 
   if (!projectId || !clientEmail || !privateKey) {
     throw new Error(
