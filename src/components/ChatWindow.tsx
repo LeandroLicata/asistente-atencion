@@ -26,10 +26,9 @@ export function ChatWindow({ conversation, onBack, onDeleted }: Props) {
   const [deleting, setDeleting] = useState(false);
   const bottomRef = useRef<HTMLDivElement>(null);
 
+  // El estado se reinicia al cambiar de conversación porque el panel monta
+  // este componente con key={conversation.id}.
   useEffect(() => {
-    setMessages([]);
-    setReplyError(null);
-    setConfirmingDelete(false);
     let firstSnapshot = true;
     return watchMessages(
       conversation.id,

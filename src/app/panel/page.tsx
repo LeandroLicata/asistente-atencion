@@ -87,6 +87,7 @@ export default function PanelPage() {
         <section className={`${active ? "flex" : "hidden md:flex"} min-w-0 flex-1`}>
           {active ? (
             <ChatWindow
+              key={active.id}
               conversation={active}
               onBack={() => setActiveId(null)}
               onDeleted={() => setActiveId(null)}
