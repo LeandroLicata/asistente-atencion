@@ -13,3 +13,22 @@
 body {
   @apply bg-slate-50 text-slate-900;
 }
+
+/* Tailwind 4 dejó los botones con el cursor por defecto. Volvemos a la
+   manito para todo lo clickeable, y a "no permitido" cuando está
+   deshabilitado. Va en @layer base para que una clase como cursor-wait
+   pueda pisarlo si hace falta. */
+@layer base {
+  button:not(:disabled),
+  [role="button"]:not([aria-disabled="true"]),
+  label[for],
+  select:not(:disabled) {
+    cursor: pointer;
+  }
+
+  button:disabled,
+  [role="button"][aria-disabled="true"],
+  select:disabled {
+    cursor: not-allowed;
+  }
+}
