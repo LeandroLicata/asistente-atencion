@@ -7,6 +7,7 @@ import {
   orderBy,
   query,
   serverTimestamp,
+  setDoc,
   updateDoc,
   where,
   type Query,
@@ -134,8 +135,15 @@ export function watchMessages(
   );
 }
 
-export async function createConversation(uid: string): Promise<string> {
-  const ref = await addDoc(collection(db, "conversations"), {
+/**
+ * Crea una conversación y devuelve su id al instante, sin esperar al
+ * servidor: el id se genera en el cliente y Firestore muestra el documento
+ * enseguida en los listeners (compensación de latencia). `saved` se
+ * resuelve cuando el servidor confirma la escritura.
+ */
+export function createConversation(uid: string): { id: string; saved: Promise<void> } {
+  const ref = doc(collection(db, "conversations"));
+  const saved = setDoc(ref, {
     ownerUid: uid,
     title: "Nueva conversación",
     channel: "web" satisfies Channel,
@@ -143,7 +151,7 @@ export async function createConversation(uid: string): Promise<string> {
     createdAt: serverTimestamp(),
     updatedAt: serverTimestamp(),
   });
-  return ref.id;
+  return { id: ref.id, saved };
 }
 
 export async function sendUserMessage(

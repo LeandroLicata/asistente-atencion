@@ -192,6 +192,8 @@ export function ChatWindow({ conversation, onBack, onDeleted }: Props) {
 
       <form onSubmit={onSubmit} className="flex gap-2 border-t border-slate-200 bg-white p-3">
         <input
+          // Al abrir una conversación el cursor ya queda listo para escribir.
+          autoFocus
           value={text}
           onChange={(e) => setText(e.target.value)}
           maxLength={MAX_MESSAGE_CHARS}

@@ -16,6 +16,9 @@ export default function PanelPage() {
   const router = useRouter();
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [activeId, setActiveId] = useState<string | null>(null);
+  // Conversación recién creada, para poder abrirla aunque todavía no haya
+  // llegado a la lista desde Firestore.
+  const [pendingNew, setPendingNew] = useState<Conversation | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   // Ruta protegida: sin sesión vuelve al login.
@@ -33,8 +36,25 @@ export default function PanelPage() {
 
   async function handleNew() {
     if (!user) return;
-    const id = await createConversation(user.uid);
+    // La seleccionamos al instante; si el servidor rechaza la escritura,
+    // volvemos atrás y avisamos.
+    const { id, saved } = createConversation(user.uid);
+    setPendingNew({
+      id,
+      title: "Nueva conversación",
+      channel: "web",
+      lastMessage: "",
+      updatedAt: null,
+    });
     setActiveId(id);
+    setError(null);
+    try {
+      await saved;
+    } catch (err) {
+      console.error(err);
+      setActiveId((current) => (current === id ? null : current));
+      setError("No se pudo crear la conversación.");
+    }
   }
 
   if (loading || !user) {
@@ -45,7 +65,9 @@ export default function PanelPage() {
     );
   }
 
-  const active = conversations.find((c) => c.id === activeId) ?? null;
+  const active =
+    conversations.find((c) => c.id === activeId) ??
+    (pendingNew?.id === activeId ? pendingNew : null);
 
   return (
     <div className="flex h-screen flex-col">
