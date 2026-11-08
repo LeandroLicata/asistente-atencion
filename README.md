@@ -134,7 +134,20 @@ Cliente en WhatsApp ◄── Meta ◄── Graph API /messages
 3. En **WhatsApp → Configuración → Webhook**: URL
    `https://<tu-dominio>/api/whatsapp`, el mismo `WHATSAPP_VERIFY_TOKEN`, y
    suscribirse al campo **messages**.
-4. Escribirle al número de prueba desde WhatsApp.
+4. Publicar la app (Meta pide una URL de política de privacidad: la demo usa
+   `/privacidad`). Mientras la app no está publicada, Meta solo manda los
+   webhooks de prueba del panel, no los mensajes reales.
+5. Suscribir la cuenta de WhatsApp Business a la app. Configurar el webhook
+   le dice a Meta a dónde mandar los avisos, pero la cuenta también tiene que
+   estar conectada a la app; si no, los mensajes llegan a Meta y nunca al
+   webhook:
+
+   ```bash
+   curl -X POST "https://graph.facebook.com/v27.0/<WABA_ID>/subscribed_apps" \
+     -H "Authorization: Bearer <WHATSAPP_ACCESS_TOKEN>"
+   ```
+
+6. Escribirle al número de prueba desde WhatsApp.
 
 El token temporal de **API Setup** vence a las 24 h; para que quede
 funcionando hay que generar un token permanente con un usuario del sistema
@@ -153,7 +166,7 @@ Se puede volver a correr cuando haga falta dejar la demo limpia.
 
 ## Próximos pasos
 
-- [ ] Webhook de WhatsApp Cloud API (número de prueba de Meta).
+- [x] Webhook de WhatsApp Cloud API (número de prueba de Meta).
 - [ ] Derivar la conversación a una persona del equipo.
 - [ ] Guardar los pedidos confirmados en Firestore y mostrarlos en el panel.
 - [x] Deploy del panel en Vercel.
