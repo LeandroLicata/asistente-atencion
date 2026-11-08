@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/lib/auth-context";
 import { LoginForm } from "@/components/LoginForm";
@@ -34,6 +35,11 @@ export default function Home() {
           </p>
         </div>
         <LoginForm />
+        <p className="mt-6 text-center text-xs text-slate-400">
+          <Link href="/privacidad" className="hover:text-slate-600 hover:underline">
+            Política de privacidad
+          </Link>
+        </p>
       </div>
     </main>
   );
