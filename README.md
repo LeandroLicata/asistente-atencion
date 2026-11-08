@@ -119,8 +119,10 @@ Cliente en WhatsApp ◄── Meta ◄── Graph API /messages
   mensaje se guarda con el id que da Meta (`wamid`) y los duplicados se
   descartan.
 - En Argentina WhatsApp manda los celulares con el 9 (`549…`), pero la lista
-  de destinatarios de prueba los guarda sin él; el webhook lo ajusta antes de
-  responder para evitar el error 131030.
+  de destinatarios de prueba de Meta puede guardarlos sin el 9 o con el 15
+  después del código de área (`54 261 15 …`). Si Meta responde el error
+  131030 (número fuera de la lista), el webhook prueba esos formatos y
+  recuerda el que funcionó.
 
 ### Configuración
 

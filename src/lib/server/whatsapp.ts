@@ -72,18 +72,47 @@ export function isValidSignature(rawBody: string, header: string | null): boolea
 // --- Envío ----------------------------------------------------------------
 
 /**
- * En Argentina, WhatsApp manda los números con el 9 de celulares
- * (549 + área + número), pero la lista de destinatarios de prueba de Meta
- * los guarda sin el 9. Si se responde al número tal como llega, Meta
- * devuelve el error 131030 ("recipient not in allowed list"). Le sacamos el
- * 9 para que coincida.
+ * Formatos posibles para responderle a un número.
+ *
+ * En Argentina, WhatsApp avisa los mensajes con el número en formato
+ * internacional (549 + área + número), pero la lista de destinatarios de
+ * prueba de Meta puede tenerlo guardado de otra forma: sin el 9, o con el 15
+ * de los celulares después del código de área (54 + área + 15 + número). Si
+ * se responde a un formato que no está en la lista, Meta devuelve el error
+ * 131030. Como el código de área tiene entre 2 y 4 dígitos, probamos las
+ * variantes en orden hasta que una funciona.
  */
-export function toRecipient(from: string): string {
-  return /^549\d{10}$/.test(from) ? `54${from.slice(3)}` : from;
+export function recipientCandidates(from: string): string[] {
+  const match = /^549(\d{10})$/.exec(from);
+  if (!match) return [from];
+
+  const local = match[1]; // área + número, 10 dígitos
+  const candidates = [from, `54${local}`];
+  for (const areaLength of [3, 2, 4]) {
+    const area = local.slice(0, areaLength);
+    const number = local.slice(areaLength);
+    candidates.push(`54${area}15${number}`);
+  }
+  return candidates;
 }
 
-/** Manda un mensaje de texto por WhatsApp. */
-export async function sendText(to: string, body: string): Promise<void> {
+// Formato que funcionó para cada número, para no repetir los intentos
+// fallidos en cada mensaje (vive en memoria de la instancia).
+const workingRecipient = new Map<string, string>();
+
+const RECIPIENT_NOT_ALLOWED = 131030;
+
+class WhatsAppError extends Error {
+  constructor(
+    readonly status: number,
+    readonly code: number | undefined,
+    detail: string,
+  ) {
+    super(`WhatsApp respondió ${status}: ${detail}`);
+  }
+}
+
+async function postMessage(to: string, body: string): Promise<void> {
   const token = process.env.WHATSAPP_ACCESS_TOKEN;
   const phoneNumberId = process.env.WHATSAPP_PHONE_NUMBER_ID;
   if (!token || !phoneNumberId) {
@@ -101,7 +130,7 @@ export async function sendText(to: string, body: string): Promise<void> {
       body: JSON.stringify({
         messaging_product: "whatsapp",
         recipient_type: "individual",
-        to: toRecipient(to),
+        to,
         type: "text",
         text: { body, preview_url: false },
       }),
@@ -113,6 +142,35 @@ export async function sendText(to: string, body: string): Promise<void> {
     // El error de Meta trae código y mensaje útiles para diagnosticar
     // (token vencido, número fuera de la lista de prueba, etc.).
     const detail = await res.text().catch(() => "");
-    throw new Error(`WhatsApp respondió ${res.status}: ${detail}`);
+    let code: number | undefined;
+    try {
+      code = (JSON.parse(detail) as { error?: { code?: number } }).error?.code;
+    } catch {
+      // la respuesta no era JSON; nos quedamos con el texto
+    }
+    throw new WhatsAppError(res.status, code, detail);
   }
+}
+
+/** Manda un mensaje de texto por WhatsApp al número que nos escribió. */
+export async function sendText(from: string, body: string): Promise<void> {
+  const known = workingRecipient.get(from);
+  const candidates = known ? [known] : recipientCandidates(from);
+
+  let lastError: unknown;
+  for (const to of candidates) {
+    try {
+      await postMessage(to, body);
+      workingRecipient.set(from, to);
+      return;
+    } catch (err) {
+      lastError = err;
+      // Solo probamos otro formato si el problema es que el número no está
+      // en la lista; cualquier otro error (token vencido, etc.) se informa.
+      if (!(err instanceof WhatsAppError) || err.code !== RECIPIENT_NOT_ALLOWED) {
+        throw err;
+      }
+    }
+  }
+  throw lastError;
 }
