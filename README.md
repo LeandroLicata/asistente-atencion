@@ -20,6 +20,8 @@ sin registrarte, o escribile al asistente como si fueras un cliente.
   real con `onSnapshot` de Firestore.
 - **Respuestas con IA**: cuando el cliente escribe, el servidor arma el
   historial, consulta a Gemini y guarda la respuesta en Firestore.
+- **WhatsApp**: el mismo asistente atiende por WhatsApp (Cloud API de Meta).
+  Las conversaciones aparecen en el panel en tiempo real, con su etiqueta.
 - **Borrar conversaciones** con sus mensajes, desde el servidor
   (`recursiveDelete`), porque Firestore no borra subcolecciones solo.
 - **Reglas de Firestore** para que cada usuario vea solo sus conversaciones y
@@ -61,11 +63,12 @@ src/
   app/panel/page.tsx        panel (ruta protegida)
   app/api/reply/route.ts    genera y guarda la respuesta del asistente
   app/api/conversations/    borra una conversación con sus mensajes
+  app/api/whatsapp/         webhook de WhatsApp (verificación y mensajes)
   components/               LoginForm, ConversationList, ChatWindow
   lib/firebase.ts           SDK de cliente
   lib/auth-context.tsx      sesión y métodos de login
   lib/chat.ts               modelo de datos y consultas a Firestore
-  lib/server/               Admin SDK y prompt del asistente (solo servidor)
+  lib/server/               Admin SDK, prompt, respuestas y WhatsApp (solo servidor)
 functions/src/index.ts      versión con Cloud Function (requiere Blaze)
 firestore.rules             reglas de seguridad
 firestore.indexes.json      índice para la lista de conversaciones
@@ -97,6 +100,43 @@ firestore.indexes.json      índice para la lista de conversaciones
    ```bash
    npm run dev
    ```
+
+## WhatsApp
+
+```
+Cliente en WhatsApp ──► Meta ──POST──► /api/whatsapp
+                                          │ 1. verifica la firma (X-Hub-Signature-256)
+                                          │ 2. responde 200 y sigue con after()
+                                          │ 3. guarda el mensaje en Firestore
+                                          │ 4. genera la respuesta (misma lógica que el chat web)
+                                          ▼
+Cliente en WhatsApp ◄── Meta ◄── Graph API /messages
+```
+
+- Una conversación por teléfono (`conversations/wa_<teléfono>`), asignada a
+  la cuenta de `WHATSAPP_OWNER_UID`. En el panel se ve en modo lectura.
+- Meta reintenta el webhook si no recibe un 200 a tiempo, así que cada
+  mensaje se guarda con el id que da Meta (`wamid`) y los duplicados se
+  descartan.
+- En Argentina WhatsApp manda los celulares con el 9 (`549…`), pero la lista
+  de destinatarios de prueba los guarda sin él; el webhook lo ajusta antes de
+  responder para evitar el error 131030.
+
+### Configuración
+
+1. En [Meta for Developers](https://developers.facebook.com/), crear una app,
+   agregarle el producto **WhatsApp** y, en **API Setup**, agregar tu número
+   como destinatario de prueba.
+2. Cargar las variables `WHATSAPP_*` de `.env.example` en Vercel y
+   redeployar.
+3. En **WhatsApp → Configuración → Webhook**: URL
+   `https://<tu-dominio>/api/whatsapp`, el mismo `WHATSAPP_VERIFY_TOKEN`, y
+   suscribirse al campo **messages**.
+4. Escribirle al número de prueba desde WhatsApp.
+
+El token temporal de **API Setup** vence a las 24 h; para que quede
+funcionando hay que generar un token permanente con un usuario del sistema
+(Business Settings → Usuarios del sistema).
 
 ## Cuenta demo
 

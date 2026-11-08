@@ -1,36 +1,19 @@
 import { NextRequest, NextResponse } from "next/server";
-import { FieldValue } from "firebase-admin/firestore";
 import { adminDb } from "@/lib/server/firebase-admin";
 import { getUidFromRequest } from "@/lib/server/auth";
-import { FALLBACK_REPLY, generateReply, type Turn } from "@/lib/server/assistant";
+import { rateLimited, replyToConversation } from "@/lib/server/replies";
 
 // El Admin SDK necesita el runtime de Node, no Edge.
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-const HISTORY_LIMIT = 20;
-
-// Rate limit simple por usuario. Vive en memoria, así que en serverless cada
-// instancia lleva su cuenta; alcanza para frenar abusos de una demo.
-const WINDOW_MS = 60_000;
-const MAX_REQUESTS = 10;
-const hits = new Map<string, number[]>();
-
-function rateLimited(uid: string): boolean {
-  const now = Date.now();
-  const recent = (hits.get(uid) ?? []).filter((t) => now - t < WINDOW_MS);
-  recent.push(now);
-  hits.set(uid, recent);
-  return recent.length > MAX_REQUESTS;
-}
-
 /**
  * POST /api/reply  { conversationId }
  * Header: Authorization: Bearer <Firebase ID token>
  *
- * Hace lo mismo que la Cloud Function de functions/: lee el historial, le
- * pide la respuesta a Gemini y la guarda en Firestore. El panel la recibe por
- * onSnapshot, igual que si la hubiera escrito la función.
+ * Responde el último mensaje de una conversación del chat web. Hace lo mismo
+ * que la Cloud Function de functions/: lee el historial, le pide la respuesta
+ * a Gemini y la guarda en Firestore. El panel la recibe por onSnapshot.
  */
 export async function POST(req: NextRequest) {
   // 1. Autenticación: el ID token lo emite Firebase Auth en el cliente.
@@ -39,7 +22,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "No autenticado" }, { status: 401 });
   }
 
-  if (rateLimited(uid)) {
+  if (rateLimited(`uid:${uid}`)) {
     return NextResponse.json(
       { error: "Demasiados mensajes seguidos. Esperá un minuto." },
       { status: 429 },
@@ -60,39 +43,16 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Conversación no encontrada" }, { status: 404 });
   }
 
-  // 4. Historial, del más viejo al más nuevo.
-  const messagesRef = conversationRef.collection("messages");
-  const snap = await messagesRef.orderBy("createdAt", "desc").limit(HISTORY_LIMIT).get();
-  const history: Turn[] = snap.docs
-    .reverse()
-    .map((d) => d.data())
-    .filter((m) => typeof m.text === "string" && m.text.length > 0)
-    .map((m) => ({ role: m.role === "assistant" ? "assistant" : "user", text: m.text }));
-
-  // Si el último mensaje ya es del asistente, no hay nada que responder.
-  // Evita respuestas duplicadas si el cliente reintenta.
-  if (history.at(-1)?.role !== "user") {
-    return NextResponse.json({ ok: true, skipped: true });
+  // Las de WhatsApp las responde el webhook y la respuesta se manda por
+  // WhatsApp; generarla desde acá la guardaría sin que le llegue al cliente.
+  if (conversation.get("channel") === "whatsapp") {
+    return NextResponse.json(
+      { error: "Las conversaciones de WhatsApp se responden desde WhatsApp." },
+      { status: 409 },
+    );
   }
 
-  // 5. Respuesta de Gemini. Si falla, se guarda un mensaje de respaldo para
-  // que el cliente no quede esperando para siempre.
-  let reply = FALLBACK_REPLY;
-  try {
-    reply = await generateReply(history);
-  } catch (err) {
-    console.error("Falló la llamada a Gemini", err);
-  }
-
-  await messagesRef.add({
-    role: "assistant",
-    text: reply,
-    createdAt: FieldValue.serverTimestamp(),
-  });
-  await conversationRef.update({
-    lastMessage: reply,
-    updatedAt: FieldValue.serverTimestamp(),
-  });
-
-  return NextResponse.json({ ok: true });
+  // 4. Generar y guardar la respuesta (no hace nada si ya estaba respondida).
+  const reply = await replyToConversation(conversationRef);
+  return NextResponse.json({ ok: true, skipped: reply === null });
 }

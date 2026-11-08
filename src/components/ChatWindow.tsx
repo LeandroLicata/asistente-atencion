@@ -26,6 +26,10 @@ export function ChatWindow({ conversation, onBack, onDeleted }: Props) {
   const [deleting, setDeleting] = useState(false);
   const bottomRef = useRef<HTMLDivElement>(null);
 
+  // Las conversaciones de WhatsApp las responde el webhook y las respuestas
+  // salen por WhatsApp: en el panel se ven en modo lectura.
+  const isWhatsApp = conversation.channel === "whatsapp";
+
   // El estado se reinicia al cambiar de conversación porque el panel monta
   // este componente con key={conversation.id}.
   useEffect(() => {
@@ -37,11 +41,13 @@ export function ChatWindow({ conversation, onBack, onDeleted }: Props) {
         // Si al abrir la conversación el último mensaje quedó sin respuesta
         // (por ejemplo, se cerró la pestaña a mitad), la pedimos de nuevo.
         // La API es idempotente: si ya hay respuesta, no hace nada.
-        if (firstSnapshot && items.at(-1)?.role === "user") {
+        if (firstSnapshot && !isWhatsApp && items.at(-1)?.role === "user") {
           requestReply(conversation.id).catch((err) => {
             console.error(err);
             setReplyError(
-              err instanceof Error ? err.message : "No se pudo obtener la respuesta.",
+              err instanceof Error
+                ? err.message
+                : "No se pudo obtener la respuesta.",
             );
           });
         }
@@ -52,7 +58,7 @@ export function ChatWindow({ conversation, onBack, onDeleted }: Props) {
         setError("No se pudieron cargar los mensajes.");
       },
     );
-  }, [conversation.id]);
+  }, [conversation.id, isWhatsApp]);
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -69,7 +75,9 @@ export function ChatWindow({ conversation, onBack, onDeleted }: Props) {
       await requestReply(conversation.id);
     } catch (err) {
       console.error(err);
-      setReplyError(err instanceof Error ? err.message : "No se pudo obtener la respuesta.");
+      setReplyError(
+        err instanceof Error ? err.message : "No se pudo obtener la respuesta.",
+      );
     }
   }
 
@@ -98,7 +106,11 @@ export function ChatWindow({ conversation, onBack, onDeleted }: Props) {
       onDeleted();
     } catch (err) {
       console.error(err);
-      setError(err instanceof Error ? err.message : "No se pudo borrar la conversación.");
+      setError(
+        err instanceof Error
+          ? err.message
+          : "No se pudo borrar la conversación.",
+      );
       setDeleting(false);
       setConfirmingDelete(false);
     }
@@ -114,12 +126,16 @@ export function ChatWindow({ conversation, onBack, onDeleted }: Props) {
         >
           ←
         </button>
-        <h2 className="min-w-0 flex-1 truncate font-medium">{conversation.title}</h2>
+        <h2 className="min-w-0 flex-1 truncate font-medium">
+          {conversation.title}
+        </h2>
 
         {/* Confirmación en dos pasos para no borrar por error. */}
         {confirmingDelete ? (
           <div className="flex shrink-0 items-center gap-2 text-sm">
-            <span className="hidden text-slate-600 sm:inline">¿Borrar la conversación?</span>
+            <span className="hidden text-slate-600 sm:inline">
+              ¿Borrar la conversación?
+            </span>
             <button
               onClick={handleDelete}
               disabled={deleting}
@@ -188,26 +204,40 @@ export function ChatWindow({ conversation, onBack, onDeleted }: Props) {
         <div ref={bottomRef} />
       </div>
 
-      {error && <p className="bg-red-50 px-4 py-2 text-sm text-red-700">{error}</p>}
+      {error && (
+        <p className="bg-red-50 px-4 py-2 text-sm text-red-700">{error}</p>
+      )}
 
-      <form onSubmit={onSubmit} className="flex gap-2 border-t border-slate-200 bg-white p-3">
-        <input
-          // Al abrir una conversación el cursor ya queda listo para escribir.
-          autoFocus
-          value={text}
-          onChange={(e) => setText(e.target.value)}
-          maxLength={MAX_MESSAGE_CHARS}
-          placeholder={waitingReply ? "Esperando respuesta…" : "Escribí un mensaje"}
-          className="min-w-0 flex-1 rounded-full border border-slate-300 px-4 py-2 text-sm outline-none focus:border-brand-500 focus:ring-2 focus:ring-brand-100"
-        />
-        <button
-          type="submit"
-          disabled={!text.trim() || lastIsUser}
-          className="rounded-full bg-brand-600 px-5 py-2 text-sm font-medium text-white hover:bg-brand-700 disabled:opacity-50"
+      {isWhatsApp ? (
+        <p className="border-t border-slate-200 bg-green-50 px-4 py-3 text-center text-sm text-green-800">
+          Conversación de WhatsApp: el asistente responde automáticamente por
+          WhatsApp. Acá podés seguirla en tiempo real.
+        </p>
+      ) : (
+        <form
+          onSubmit={onSubmit}
+          className="flex gap-2 border-t border-slate-200 bg-white p-3"
         >
-          Enviar
-        </button>
-      </form>
+          <input
+            // Al abrir una conversación el cursor ya queda listo para escribir.
+            autoFocus
+            value={text}
+            onChange={(e) => setText(e.target.value)}
+            maxLength={MAX_MESSAGE_CHARS}
+            placeholder={
+              waitingReply ? "Esperando respuesta…" : "Escribí un mensaje"
+            }
+            className="min-w-0 flex-1 rounded-full border border-slate-300 px-4 py-2 text-sm outline-none focus:border-brand-500 focus:ring-2 focus:ring-brand-100"
+          />
+          <button
+            type="submit"
+            disabled={!text.trim() || lastIsUser}
+            className="rounded-full bg-brand-600 px-5 py-2 text-sm font-medium text-white hover:bg-brand-700 disabled:opacity-50"
+          >
+            Enviar
+          </button>
+        </form>
+      )}
     </div>
   );
 }
