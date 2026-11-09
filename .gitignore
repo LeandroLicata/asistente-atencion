@@ -46,3 +46,6 @@ next-env.d.ts
 /functions/lib
 .firebase/
 *-debug.log
+
+# captura sin difuminar (tiene el número de teléfono): solo para uso personal
+docs/captura-whatsapp-panel.jpg

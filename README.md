@@ -1,8 +1,10 @@
 # Asistente de atención — demo
 
-Demo de un asistente de atención al cliente con IA, armada para practicar
-**Firebase (Authentication, Firestore y Cloud Functions)** sobre mi stack de
-siempre: **Next.js, TypeScript y Tailwind**.
+Demo de un asistente de atención al cliente con IA que atiende **por la web y
+por WhatsApp**, armada para practicar **Firebase (Authentication, Firestore y
+Cloud Functions)** y la **API de WhatsApp Business** sobre mi stack de
+siempre: **Next.js, TypeScript y Tailwind**, con **Gemini** para las
+respuestas.
 
 🔗 **Demo:** [asistente-atencion.vercel.app](https://asistente-atencion.vercel.app)
 — entrá con **Probar con la cuenta demo** para ver conversaciones de ejemplo
@@ -64,6 +66,7 @@ src/
   app/api/reply/route.ts    genera y guarda la respuesta del asistente
   app/api/conversations/    borra una conversación con sus mensajes
   app/api/whatsapp/         webhook de WhatsApp (verificación y mensajes)
+  app/privacidad/           política de privacidad (la pide Meta)
   components/               LoginForm, ConversationList, ChatWindow
   lib/firebase.ts           SDK de cliente
   lib/auth-context.tsx      sesión y métodos de login
@@ -72,6 +75,8 @@ src/
 functions/src/index.ts      versión con Cloud Function (requiere Blaze)
 firestore.rules             reglas de seguridad
 firestore.indexes.json      índice para la lista de conversaciones
+scripts/seed-demo.mjs       crea la cuenta demo con conversaciones de ejemplo
+scripts/test-gemini.mjs     prueba la conexión con Gemini
 ```
 
 ## Puesta en marcha
@@ -112,6 +117,12 @@ Cliente en WhatsApp ──► Meta ──POST──► /api/whatsapp
                                           ▼
 Cliente en WhatsApp ◄── Meta ◄── Graph API /messages
 ```
+
+![Conversación de WhatsApp vista en el panel](docs/captura-whatsapp.jpg)
+
+En la demo, las conversaciones de WhatsApp aparecen en la cuenta demo. Como
+usa el número de prueba de Meta, solo pueden escribirle los números que se
+agregan a la lista de destinatarios de prueba (hasta 5).
 
 - Una conversación por teléfono (`conversations/wa_<teléfono>`), asignada a
   la cuenta de `WHATSAPP_OWNER_UID`. En el panel se ve en modo lectura.
@@ -162,7 +173,8 @@ una pregunta que el asistente no sabe responder y un cliente molesto. Usa
 esas variables también están en Vercel, el login muestra el botón
 **Probar con la cuenta demo**.
 
-Se puede volver a correr cuando haga falta dejar la demo limpia.
+Se puede volver a correr cuando haga falta dejar la demo limpia. Ojo: borra
+todas las conversaciones de la cuenta demo, también las de WhatsApp.
 
 ## Próximos pasos
 
